@@ -1,0 +1,47 @@
+import humming_bird as hb
+import torch
+import pandas as pd
+import os
+import time
+
+if torch.cuda.is_available():   device, compute_type = "cuda", "float16"
+else:                           device, compute_type = "cpu", "int8"
+
+HF_TOKEN = 
+sf = hb.SpeakerFormatter(HF_TOKEN, device, compute_type)
+
+
+while True:
+
+    df = pd.read_parquet('downloads/metadata.parquet')\
+        .sort_values(by='upload_date', ascending=False)
+
+    path_spk = 'downloads/metadata_speaker.parquet'
+    df_spk = None
+    if os.path.exists(path_spk):
+        df_spk = pd.read_parquet(path_spk)
+
+
+    for idx, row in df.iterrows():
+        print('>>>>>>>>>>>>>>>', idx, row['upload_date'])
+        if df_spk is not None and row['video_id'] in set(df_spk.video_id):
+            print('skip')
+            continue
+
+        row_dict = row.to_dict()
+        audio_path = row['audio_path']
+
+        try:
+            lines = sf.get_audio_speaker_lines(audio_path=audio_path )
+            row_dict['lines'] = lines
+        except:
+            row_dict['lines'] = None
+
+        if df_spk is None:
+            df_spk = pd.DataFrame([row_dict])
+        else:
+            df_spk = pd.concat([df_spk, pd.DataFrame([row_dict])])
+        df_spk.reset_index(drop=True).to_parquet(path_spk)
+
+    print('Finished loop!')
+    time.sleep(50)
