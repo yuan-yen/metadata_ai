@@ -4,6 +4,8 @@ import pandas as pd
 import os
 import time
 
+torch.cuda.empty_cache()
+
 if torch.cuda.is_available():
     device = "cuda"
     compute_type = "float16" if torch.cuda.get_device_capability()[0] >= 7 else "float32"
@@ -11,7 +13,11 @@ else:
     device = "cpu"
     compute_type = "int8"
 
-HF_TOKEN = 
+HF_TOKEN = None
+with open('hf_token.txt') as f:
+    HF_TOKEN = f.read()
+    print(HF_TOKEN)
+
 sf = hb.SpeakerFormatter(HF_TOKEN, device, compute_type)
 
 
