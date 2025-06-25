@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>YouTube Metadata Viewer (Offline Version)</title>
+  <style>
+    * { box-sizing: border-box; font-family: Arial, Helvetica, sans-serif; }
+    body { margin: 0; height: 100vh; display: grid; grid-template-columns: 30% 40% 30%; grid-template-rows: 100%; overflow: hidden; background: #f7f9fc; }
+    .panel { padding: 10px; overflow-y: auto; }
+    #left { border-right: 1px solid #ccc; display: flex; flex-direction: column; }
+    #filters { flex: 0 0 auto; }
+    #itemList { flex: 1 1 auto; margin-top: 8px; }
+    #itemList button { width: 100%; text-align: left; padding: 6px 4px; margin-bottom: 4px; border: 1px solid #ddd; background: #fff; cursor: pointer; }
+    #itemList button:hover { background: #b3d1ff; }
+    #itemList button.selected { background: #99ccff; border-color: #3399ff; color: #000; }
+    #middle { border-right: 1px solid #ccc; display: flex; flex-direction: column; align-items: center; }
+    #videoInfo { margin: 6px 0; font-weight: bold; text-align: center; }
+    iframe { width: 100%; flex: 1 1 auto; border: none; }
+    #right { display: flex; flex-direction: column; }
+    #keywordsPanel, #summaryPanel, #linesPanel { margin-bottom: 12px; }
+    .keyword-badge {
+      display: inline-block;
+      background: #99ccff;
+      color: #000;
+      padding: 2px 6px;
+      margin: 2px 4px 2px 0;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    /* Inline keyword badges for transcript lines */
+    .line-keyword-badge {
+      display: inline-block;
+      background: #99ccff;
+      color: #000;
+      padding: 2px 4px;
+      margin-right: 4px;
+      border-radius: 4px;
+      font-size: 11px;
+      vertical-align: middle;
+    }
+    .line-keyword-badge:hover {
+      background: red;
+      color: #fff;
+    }
+    #summaryPanel h3, #linesPanel h3 { margin: 4px 0; }
+    #summaryContent p { margin: 4px 0; }
+    #linesContent div { margin: 2px 0; padding: 4px; border-radius: 4px; cursor: pointer; position: relative; }
+    #linesContent div:hover { background: #b3d1ff; }
+    #linesContent div.selected { background: #99bfff; }
+    .copy-btn { position: absolute; top: 4px; right: 4px; background: none; border: none; cursor: pointer; font-size: 14px; }
+    .copy-btn:hover { filter: brightness(0.8); }
+    .sectionTitle { font-size: 14px; font-weight: bold; margin: 8px 0 4px; }
+    /* Highlight summary items on hover */
+    #summaryContent p {
+      padding: 4px;
+      border-radius: 4px;
+      transition: background 0.2s ease;
+    }
+    #summaryContent p:hover {
+      background: #b3d1ff;
+    }
+    @media (max-width: 900px) {
+      body { grid-template-columns: 1fr; grid-template-rows: auto auto auto; }
+      #left, #middle, #right { border: none; height: 33vh; }
+    }
+  </style>
+</head>
+<body>
+  <div id="left" class="panel">
+    <div>
+      <input type="file" id="fileInput" accept="application/json" />
+    </div>
+    <div id="filters">
+      <div class="sectionTitle">Keywords</div>
+      <div id="keywordFilters"></div>
+      <div class="sectionTitle">Channels</div>
+      <div id="channelFilters"></div>
+    </div>
+    <div class="sectionTitle">Video List (<span id="listCount">0</span>)</div>
+    <div id="itemList"></div>
+  </div>
+
+  <div id="middle" class="panel">
+    <div id="videoInfo">Please select a video first</div>
+    <iframe id="player" referrerpolicy="no-referrer-when-downgrade" allow="autoplay; encrypted-media" allowfullscreen sandbox="allow-scripts allow-same-origin"></iframe>
+  </div>
+
+  <div id="right" class="panel">
+    <div id="keywordsPanel">
+      <h3>Keywords</h3>
+      <div id="keywordsContent">Please select a video first</div>
+    </div>
+    <div id="summaryPanel">
+      <h3>Summary</h3>
+      <div id="summaryContent">Please select a video first</div>
+    </div>
+    <div id="linesPanel" style="flex:1 1 auto;">
+      <h3>Transcript (Click to Jump)</h3>
+      <div id="linesContent"></div>
+    </div>
+  </div>
+
+  <script>
+    let videos = [];
+    let currentVideo = null;
+    const fileInput = document.getElementById('fileInput');
+    fileInput.addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = evt => {
+          try { videos = JSON.parse(evt.target.result); init(); }
+          catch (err) { alert('JSON parsing failed: ' + err.message); }
+        };
+        reader.readAsText(file, 'utf-8');
+      }
+    });
+
+    fetch('metadata_ai.json')
+      .then(r => r.ok ? r.text() : Promise.reject())
+      .then(txt => { videos = JSON.parse(txt); init(); })
+      .catch(() => {});
+
+    function init() {
+      videos.sort((a, b) => new Date(b.upload_date) - new Date(a.upload_date));
+      buildFilters();
+      buildItemList();
+    }
+
+    function uniq(arr) { return Array.from(new Set(arr)).sort(); }
+
+    // Build keyword filters with an "All" option and AND behavior
+    function buildKeywordGroup(containerId, items, onChange) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = '';
+      // "All" checkbox
+      const allId = containerId + '_ALL';
+      const allLabel = document.createElement('label'); allLabel.style.display='block';
+      const allCb = document.createElement('input');
+      allCb.type = 'checkbox'; allCb.id = allId; allCb.value = 'ALL'; allCb.checked = true;
+      allCb.addEventListener('change', () => {
+        if (allCb.checked) {
+          // reset to initial: uncheck all individual keywords
+          container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+            if (cb !== allCb) cb.checked = false;
+          });
+        }
+        onChange();
+      });
+      allLabel.appendChild(allCb);
+      allLabel.appendChild(document.createTextNode(' All'));
+      container.appendChild(allLabel);
+      // individual keywords
+      items.forEach(txt => {
+        const id = `${containerId}_${txt}`;
+        const label = document.createElement('label'); label.style.display='block';
+        const cb = document.createElement('input'); cb.type = 'checkbox'; cb.id = id; cb.value = txt;
+        cb.addEventListener('change', () => {
+          if (cb.checked) {
+            allCb.checked = false;
+          } else {
+            // if none checked, revert to All
+            const anyChecked = items.some(k => document.getElementById(`${containerId}_${k}`).checked);
+            if (!anyChecked) {
+              allCb.checked = true;
+            }
+          }
+          onChange();
+        });
+        label.appendChild(cb);
+        label.appendChild(document.createTextNode(' ' + txt));
+        container.appendChild(label);
+      });
+    }
+
+    function buildCheckboxGroup(containerId, items, onChange) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = '';
+      items.forEach(txt => {
+        const id = `${containerId}_${txt}`;
+        const label = document.createElement('label'); label.style.display='block';
+        const cb = document.createElement('input'); cb.type='checkbox'; cb.id=id; cb.value=txt;
+        cb.addEventListener('change', onChange);
+        label.appendChild(cb); label.appendChild(document.createTextNode(' ' + txt));
+        container.appendChild(label);
+      });
+    }
+
+    function buildFilters() {
+      const keywordSet = new Set(); const channelSet = new Set();
+      videos.forEach(v => { (v.keywords||[]).forEach(k => keywordSet.add(k)); if (v.channel_title) channelSet.add(v.channel_title); });
+      buildKeywordGroup('keywordFilters', uniq([...keywordSet]), onFilterChanged);
+      buildCheckboxGroup('channelFilters', uniq([...channelSet]), onFilterChanged);
+    }
+
+    function getCheckedValues(containerId) {
+      return [...document.querySelectorAll(`#${containerId} input[type="checkbox"]:checked`)].map(cb => cb.value);
+    }
+
+    function onFilterChanged() { buildItemList(); }
+
+    function buildItemList() {
+      const list = document.getElementById('itemList'); list.innerHTML = '';
+      // Keyword AND behavior with "All"
+      const allCb = document.getElementById('keywordFilters_ALL');
+      let kw = [];
+      if (!allCb.checked) kw = getCheckedValues('keywordFilters').filter(v => v !== 'ALL');
+      const ch = getCheckedValues('channelFilters');
+      const filtered = videos.filter(v => {
+        const kws = v.keywords || [];
+        const kwMatch = kw.length === 0 || kw.every(k => kws.includes(k));
+        const chMatch = ch.length === 0 || ch.includes(v.channel_title);
+        return kwMatch && chMatch;
+      });
+      document.getElementById('listCount').textContent = filtered.length;
+      filtered.forEach(v => {
+        const btn = document.createElement('button');
+        btn.textContent = `${v.channel_title || 'N/A'} | ${v.video_title || 'N/A'} | ${new Date(v.upload_date).toLocaleString()}`;
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('#itemList button.selected').forEach(b => b.classList.remove('selected'));
+          btn.classList.add('selected');
+          loadVideo(v);
+        });
+        list.appendChild(btn);
+      });
+    }
+
+    function loadVideo(v) {
+      currentVideo = v;
+      document.getElementById('videoInfo').textContent = `${v.channel_title} - ${v.video_title}`;
+      document.getElementById('player').src = `https://www.youtube-nocookie.com/embed/${v.video_id}?enablejsapi=1`;
+      renderKeywords(v.keywords || []);
+      renderSummary(v.summary);
+      renderLines(v.lines || []);
+    }
+
+    function renderSummary(summary) {
+      const c = document.getElementById('summaryContent');
+      c.innerHTML = '';  // Always clear the panel first
+
+      if (!summary || (typeof summary === 'object' && Object.keys(summary).length === 0)) {
+        c.textContent = 'No summary available';
+        return;
+      }
+
+      if (typeof summary === 'string') {
+        c.textContent = summary;
+        return;
+      }
+
+      const highLevelKey = summary.high_level_summary || summary.high_level || summary.overall || summary.main || summary.highLevel;
+      if (highLevelKey) {
+        const p = document.createElement('p');
+        const label = summary.high_level_summary ? 'High Level Summary' : 'Overall Summary';
+        p.innerHTML = `<strong>${label}:</strong> ${highLevelKey}`;
+        c.appendChild(p);
+        const hr = document.createElement('hr');
+        hr.style.margin = '8px 0';
+        c.appendChild(hr);
+      }
+
+      const sp = summary.speakers || summary.speaker || summary;
+      for (const [k, v] of Object.entries(sp)) {
+        if (['high_level_summary', 'high_level', 'overall', 'main', 'highLevel'].includes(k)) continue;
+        if (typeof v !== 'string') continue; // avoid rendering objects
+        const p = document.createElement('p');
+        p.innerHTML = `<strong>${k}:</strong> ${v}`;
+        c.appendChild(p);
+      }
+    }
+
+    function renderKeywords(keywords) {
+      const c = document.getElementById('keywordsContent');
+      c.innerHTML = '';
+      if (!keywords || keywords.length === 0) {
+        c.textContent = 'No keywords available';
+        return;
+      }
+      keywords.forEach(k => {
+        const span = document.createElement('span');
+        span.textContent = k;
+        span.className = 'keyword-badge';
+        c.appendChild(span);
+      });
+    }
+
+    function renderLines(lines) {
+      const c = document.getElementById('linesContent'); c.innerHTML = '';
+      lines.forEach(l => {
+        const div = document.createElement('div');
+        // Render inline keyword badges if present
+        let keywordHTML = '';
+        if (Array.isArray(l.keywords) && l.keywords.length > 0) {
+          keywordHTML = l.keywords
+            .map(k => `<span class="line-keyword-badge">${k}</span>`)
+            .join('') + ' ';
+        }
+        div.innerHTML = `${keywordHTML}${timeFmt(l.start)} | ${l.speaker} | ${l.text}`;
+        div.addEventListener('click', () => { document.querySelectorAll('#linesContent div.selected').forEach(e => e.classList.remove('selected')); div.classList.add('selected'); jumpTo(l.start); });
+        const copyBtn = document.createElement('button'); copyBtn.className = 'copy-btn'; copyBtn.title = 'Copy text & link'; copyBtn.innerHTML = '📋';
+        copyBtn.addEventListener('click', ev => { ev.stopPropagation(); const txt = `${l.text} - https://www.youtube.com/watch?v=${currentVideo.video_id}&t=${Math.floor(l.start)}`; navigator.clipboard.writeText(txt).catch(err => console.error(err)); });
+        div.appendChild(copyBtn); c.appendChild(div);
+      });
+    }
+
+    function jumpTo(sec) { if (!currentVideo) return; document.getElementById('player').src = `https://www.youtube-nocookie.com/embed/${currentVideo.video_id}?start=${Math.floor(sec)}&enablejsapi=1&autoplay=1`; }
+    function timeFmt(t) { const s = Math.floor(t), h = Math.floor(s/3600), m = Math.floor((s%3600)/60), ss = s%60; return `${h>0?String(h).padStart(2,'0')+':':''}${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`; }
+  </script>
+</body>
+</html>
