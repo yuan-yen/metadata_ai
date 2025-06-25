@@ -7,7 +7,7 @@ from datetime import datetime
 # ====== 設定 ======
 SOURCE_FILE = '../hb/exec/downloads/metadata_speaker.parquet'  # 修改為來源檔案的完整路徑
 DEST_FILE = './metadata_speaker.parquet'               # 目標檔案名稱（存在當前目錄）
-INTERVAL = 20                               # 秒數
+INTERVAL = 60                               # 秒數
 
 def git_commit_and_push():
     try:
