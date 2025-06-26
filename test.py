@@ -7,3 +7,10 @@ df = pd.read_parquet('downloads/metadata_speaker.parquet')
 
 df.iloc[0].lines
 # %%
+
+
+
+df = pd.read_parquet('downloads/metadata.parquet')
+# %%
+df
+# %%

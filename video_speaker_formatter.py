@@ -16,17 +16,16 @@ else:
 HF_TOKEN = None
 with open('hf_token.txt') as f:
     HF_TOKEN = f.read()
-    print(HF_TOKEN)
 
 sf = hb.SpeakerFormatter(HF_TOKEN, device, compute_type)
 
 
 while True:
 
-    df = pd.read_parquet('downloads/metadata.parquet')\
+    df = pd.read_parquet('metadata.parquet')\
         .sort_values(by='upload_date', ascending=False)
 
-    path_spk = 'downloads/metadata_speaker.parquet'
+    path_spk = 'metadata_speaker.parquet'
     df_spk = None
     if os.path.exists(path_spk):
         df_spk = pd.read_parquet(path_spk)
@@ -54,4 +53,4 @@ while True:
         df_spk.reset_index(drop=True).to_parquet(path_spk)
 
     print('Finished loop!')
-    time.sleep(50)
+    time.sleep(5)

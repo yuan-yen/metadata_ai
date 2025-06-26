@@ -2,7 +2,7 @@ import humming_bird as hb
 import time
 
 manager = hb.VideoDownloadManager(
-    metadata_file='downloads/metadata.parquet',
+    metadata_file='metadata.parquet',
     delay_time = 180
 )
 channels = [
