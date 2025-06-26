@@ -1,3 +1,4 @@
+# %%
 import humming_bird as hb
 import torch
 import pandas as pd
@@ -20,10 +21,13 @@ with open('hf_token.txt') as f:
 sf = hb.SpeakerFormatter(HF_TOKEN, device, compute_type)
 
 
-while True:
+#while True:
+for _ in range(1):
 
     df = pd.read_parquet('metadata.parquet')\
         .sort_values(by='upload_date', ascending=False)
+
+    #display(df)
 
     path_spk = 'metadata_speaker.parquet'
     df_spk = None
@@ -31,26 +35,35 @@ while True:
         df_spk = pd.read_parquet(path_spk)
 
 
-    for idx, row in df.iterrows():
+    for idx, row in df[:2].iterrows():
         print('>>>>>>>>>>>>>>>', idx, row['upload_date'])
-        if df_spk is not None and row['video_id'] in set(df_spk.video_id):
-            print('skip')
-            continue
+        #if df_spk is not None and row['video_id'] in set(df_spk.video_id):
+        #    print('skip')
+        #    continue
 
         row_dict = row.to_dict()
         audio_path = row['audio_path']
+        print(audio_path)
 
         try:
+            print('ddd')
             lines = sf.get_audio_speaker_lines(audio_path=audio_path )
+            print(lines)
             row_dict['lines'] = lines
         except:
             row_dict['lines'] = None
 
-        if df_spk is None:
-            df_spk = pd.DataFrame([row_dict])
-        else:
-            df_spk = pd.concat([df_spk, pd.DataFrame([row_dict])])
-        df_spk.reset_index(drop=True).to_parquet(path_spk)
+    #    #if df_spk is None:
+    #    #    df_spk = pd.DataFrame([row_dict])
+    #    #else:
+    #    #    df_spk = pd.concat([df_spk, pd.DataFrame([row_dict])])
+    #    #df_spk.reset_index(drop=True).to_parquet(path_spk)
 
-    print('Finished loop!')
-    time.sleep(5)
+    #print('Finished loop!')
+    #time.sleep(10)
+
+# %%
+
+import pyarrow
+pyarrow.__version__
+# %%
