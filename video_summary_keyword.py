@@ -29,7 +29,7 @@ model_selected = ce.AFM_MODEL_ID_DEFAULT
 #model_selected = "endor-text-mixtral-8x22b-20250309"
 #model_selected = "anthropic-claude-3-7-sonnet-20250219-v1:0"
 
-for idx, row in df[:3].iterrows():
+for idx, row in df.iterrows():
     document_content = ""
     for line in row['lines']:
         context = f"line {line['line']}, {line['speaker']}: {line['text']}"    
