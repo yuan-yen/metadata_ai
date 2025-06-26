@@ -1,6 +1,6 @@
+# %%
 import humming_bird as hb
 import contract_engine as ce
-import torch
 import pandas as pd
 import os
 import time
@@ -14,10 +14,14 @@ ce.setup_endor_client(
 df = pd.read_parquet('metadata_speaker.parquet')\
         .sort_values(by='upload_date', ascending=False).reset_index(drop=True)
 
+df = df[~df.lines.isna()]
+
+# %%
+
 path_ai = 'metadata_ai_keyword_summary.parquet'
 df_ai = None
 if os.path.exists(path_ai):
-    df_ai = pd.read_parquet(path_ai)
+    df_ai = pd.read_parquet(path_ai, engine='fastparquet')
 
 #model_selected = "endor-text-mixtral-8x22b-20241011"
 #model_selected = "endor-text-deepseek-r1-latest"
@@ -25,7 +29,7 @@ model_selected = ce.AFM_MODEL_ID_DEFAULT
 #model_selected = "endor-text-mixtral-8x22b-20250309"
 #model_selected = "anthropic-claude-3-7-sonnet-20250219-v1:0"
 
-for idx, row in df[~df.lines.isna()].iterrows():
+for idx, row in df[:3].iterrows():
     document_content = ""
     for line in row['lines']:
         context = f"line {line['line']}, {line['speaker']}: {line['text']}"    
@@ -41,7 +45,6 @@ for idx, row in df[~df.lines.isna()].iterrows():
     if df_ai is not None and row['video_id'] in set(df_ai.video_id):
         print('skip')
         continue
- 
 
     row_dict = row.to_dict()
     try:
@@ -99,3 +102,6 @@ for idx, row in df[~df.lines.isna()].iterrows():
     df_ai.reset_index(drop=True).to_parquet(path_ai)
     time.sleep(1)
 
+
+
+# %%
