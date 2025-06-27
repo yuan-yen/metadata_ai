@@ -4,9 +4,11 @@ import torch
 import pandas as pd
 import os
 import time
+import gc
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
 def load_speaker_formatter():
+    gc.collect()
     torch.cuda.empty_cache()
 
     if torch.cuda.is_available():
