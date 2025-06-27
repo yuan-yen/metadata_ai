@@ -3,6 +3,19 @@ from whisperx.diarize import DiarizationPipeline
 from pyannote.audio import Pipeline
 import datetime
 from .utils import merge_consecutive_speaker_segments
+from pydub import AudioSegment
+import subprocess
+import json
+
+def get_audio_duration(file_path):
+    result = subprocess.run(
+        ['ffprobe', '-v', 'error', '-show_entries',
+         'format=duration', '-of', 'json', file_path],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT
+    )
+    info = json.loads(result.stdout)
+    return float(info['format']['duration'])
 
 class SpeakerFormatter:
     def __init__(self, HF_TOKEN, device, compute_type):
@@ -12,8 +25,13 @@ class SpeakerFormatter:
         self.diarize_model = DiarizationPipeline(use_auth_token=HF_TOKEN, device=device)
         self.diarize_model.pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization-3.1", use_auth_token=HF_TOKEN)
 
-    def get_audio_speaker_lines(self, audio_path: str, min_speakers=1, max_speakers=5):
+    def get_audio_speaker_lines(self, audio_path: str, min_speakers=1, max_speakers=5, max_audio_duration_sec=3600):
         time_begin = datetime.datetime.now()
+        audio_duration = get_audio_duration(audio_path)
+        print("Audio duration:", audio_duration)
+        if audio_duration > max_audio_duration_sec:
+            return []
+
         audio = whisperx.load_audio(audio_path)
         
         ## Step 1: Transcribe
