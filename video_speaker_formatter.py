@@ -6,28 +6,31 @@ import os
 import time
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
+def load_speaker_formatter():
+    torch.cuda.empty_cache()
 
-torch.cuda.empty_cache()
+    if torch.cuda.is_available():
+        device = "cuda"
+        compute_type = "float16" if torch.cuda.get_device_capability()[0] >= 7 else "float32"
+    else:
+        device = "cpu"
+        compute_type = "int8"
 
-if torch.cuda.is_available():
-    device = "cuda"
-    compute_type = "float16" if torch.cuda.get_device_capability()[0] >= 7 else "float32"
-else:
-    device = "cpu"
-    compute_type = "int8"
+    HF_TOKEN = None
+    with open('hf_token.txt') as f:
+        HF_TOKEN = f.read()
 
-HF_TOKEN = None
-with open('hf_token.txt') as f:
-    HF_TOKEN = f.read()
-
-sf = hb.SpeakerFormatter(HF_TOKEN, device, compute_type)
+    sf = hb.SpeakerFormatter(HF_TOKEN, device, compute_type)
+    return sf
 
 
+
+incr = 0
 while True:
-#for _ in range(1):
 
     df = pd.read_parquet('metadata.parquet')\
-        .sort_values(by='upload_date', ascending=False)
+        .sort_values(by='upload_date', ascending=False)\
+        .reset_index(drop=True)
 
     df_spk = None
     path_spk = 'metadata_speaker.parquet'
@@ -35,11 +38,19 @@ while True:
         df_spk = pd.read_parquet(path_spk)
         df_spk = df_spk[~df_spk['lines'].isna()]
 
+    sf = load_speaker_formatter()
+
     for idx, row in df.iterrows():
+        if incr % 10 == 0 and incr != 0:
+            del sf
+            sf = load_speaker_formatter()
+
         print('>>>>>>>>>>>>>>>', idx, row['upload_date'])
         if df_spk is not None and row['video_id'] in set(df_spk.video_id):
             print('skip')
             continue
+
+        incr += 1
 
         row_dict = row.to_dict()
         audio_path = row['audio_path']
@@ -60,10 +71,5 @@ while True:
         df_spk.reset_index(drop=True).to_parquet(path_spk)
 
     print('Finished loop!')
-    time.sleep(0)
 
-# %%
-
-import pyarrow
-pyarrow.__version__
 # %%
