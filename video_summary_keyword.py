@@ -11,17 +11,19 @@ ce.setup_endor_client(
     app_password=os.getenv('CUSTOM_ENDOR_APP_PASSWORD')
 )
 
+# %%
 df = pd.read_parquet('metadata_speaker.parquet')\
         .sort_values(by='upload_date', ascending=False).reset_index(drop=True)
 
 df = df[~df.lines.isna()]
+df
 
 # %%
 
 path_ai = 'metadata_ai_keyword_summary.parquet'
 df_ai = None
 if os.path.exists(path_ai):
-    df_ai = pd.read_parquet(path_ai, engine='fastparquet')
+    df_ai = pd.read_parquet(path_ai)
 
 #model_selected = "endor-text-mixtral-8x22b-20241011"
 #model_selected = "endor-text-deepseek-r1-latest"
