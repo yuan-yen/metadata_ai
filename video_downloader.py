@@ -6,9 +6,6 @@ manager = hb.VideoDownloadManager(
     delay_time = 180
 )
 channels = [
-    'https://www.youtube.com/@WhiteHouse',
-    "https://www.youtube.com/@FoxBusiness/",
-    'https://www.youtube.com/@FoxNews',
     'https://www.youtube.com/@ForbesBreakingNews',
     'https://www.youtube.com/@NBCNews',
     'https://www.youtube.com/@BloombergPodcasts',
@@ -18,6 +15,9 @@ channels = [
     'https://www.youtube.com/@CNBCtelevision',
     'https://www.youtube.com/@NewsNation',
     'https://www.youtube.com/@CSPAN',
+    'https://www.youtube.com/@WhiteHouse',
+    "https://www.youtube.com/@FoxBusiness/",
+    'https://www.youtube.com/@FoxNews',
 ]
 
 while True:
