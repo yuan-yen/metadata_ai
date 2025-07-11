@@ -21,5 +21,5 @@ channels = [
 ]
 
 while True:
-    manager.process_channels(channels, max_results=30)
+    manager.process_channels(channels, max_results=10)
     time.sleep(60)
