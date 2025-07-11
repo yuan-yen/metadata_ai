@@ -27,10 +27,10 @@ class SpeakerFormatter:
 
     def get_audio_speaker_lines(self, audio_path: str, min_speakers=1, max_speakers=5, max_audio_duration_sec=3600):
         time_begin = datetime.datetime.now()
-        audio_duration = get_audio_duration(audio_path)
-        print("Audio duration:", audio_duration)
-        if audio_duration > max_audio_duration_sec:
-            return []
+        #audio_duration = get_audio_duration(audio_path)
+        #print("Audio duration:", audio_duration)
+        #if audio_duration > max_audio_duration_sec:
+        #    return []
 
         audio = whisperx.load_audio(audio_path)
         

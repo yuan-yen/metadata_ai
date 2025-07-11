@@ -29,6 +29,7 @@ def load_speaker_formatter():
 
 incr = 0
 while True:
+#for _ in range(1):
 
     df = pd.read_parquet('metadata.parquet')\
         .sort_values(by='upload_date', ascending=False)\
@@ -63,7 +64,7 @@ while True:
             print(lines)
             row_dict['lines'] = lines
         except:
-            print('error')
+            print('error: Something wrong, please check code.')
             row_dict['lines'] = None
 
         if df_spk is None:
