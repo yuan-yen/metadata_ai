@@ -28,6 +28,7 @@ def load_speaker_formatter():
 
 
 incr = 0
+sf = load_speaker_formatter()
 while True:
 #for _ in range(1):
 
@@ -41,7 +42,6 @@ while True:
         df_spk = pd.read_parquet(path_spk)
         df_spk = df_spk[~df_spk['lines'].isna()]
 
-    sf = load_speaker_formatter()
 
     for idx, row in df.iterrows():
         #if incr % 10 == 0 and incr != 0:
