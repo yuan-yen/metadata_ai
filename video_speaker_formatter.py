@@ -73,7 +73,7 @@ while True:
             df_spk = pd.concat([df_spk, pd.DataFrame([row_dict])])
         df_spk.reset_index(drop=True).to_parquet(path_spk)
 
-    time.sleep(10)
+    time.sleep(180)
     print('Finished loop!')
 
 # %%
