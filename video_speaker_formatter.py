@@ -44,9 +44,9 @@ while True:
     sf = load_speaker_formatter()
 
     for idx, row in df.iterrows():
-        if incr % 10 == 0 and incr != 0:
-            del sf
-            sf = load_speaker_formatter()
+        #if incr % 10 == 0 and incr != 0:
+        #    del sf
+        #    sf = load_speaker_formatter()
 
         print('>>>>>>>>>>>>>>>', idx, row['upload_date'])
         if df_spk is not None and row['video_id'] in set(df_spk.video_id):
