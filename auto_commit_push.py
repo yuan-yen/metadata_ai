@@ -7,7 +7,7 @@ from datetime import datetime
 # ====== 設定 ======
 SOURCE_FILE = '/your/path_a/your_file.txt'  # 修改為來源檔案的完整路徑
 DEST_FILE = './your_file.txt'               # 目標檔案名稱（存在當前目錄）
-INTERVAL = 20                               # 秒數
+INTERVAL = 180                               # 秒數
 
 def git_commit_and_push():
     try:
