@@ -17,7 +17,6 @@ def run_keyword_summary():
 
     df = df[~df.lines.isna()]
 
-
     path_ai = 'metadata_ai_keyword_summary.parquet'
     df_ai = None
     if os.path.exists(path_ai):
@@ -25,7 +24,12 @@ def run_keyword_summary():
 
     model_selected = ce.AFM_MODEL_ID_DEFAULT
 
-    for idx, row in df.iterrows():
+    for idx, row in df[:500].iterrows():
+
+        if df_ai is not None and row['video_id'] in set(df_ai.video_id):
+            print('skip')
+            continue
+
         document_content = ""
         for line in row['lines']:
             context = f"line {line['line']}, {line['speaker']}: {line['text']}"    
@@ -33,35 +37,32 @@ def run_keyword_summary():
 
         document_content.replace("'", "").replace('"', "").replace('{', "").replace('}', "")
 
-    
         print(idx, len(document_content), row['upload_date'])
         keyword_prompt = hb.KEYWORD_PROMPT_TEMPLATE.substitute(document_content = document_content)
         summary_prompt = hb.SUMMARY_PROMPT_TEMPLATE.substitute(document_content = document_content)
 
-        if df_ai is not None and row['video_id'] in set(df_ai.video_id):
-            print('skip')
-            continue
-
         row_dict = row.to_dict()
+
+        try:
+            summary_response = ce.ModelInference.complete(
+                prompt=summary_prompt ,
+                model_selected=model_selected,
+                model_service_choice=ce.MODEL_SERVICE_CHOICE.ENDOR
+            )
+            print(summary_response)
+        except:
+            row_dict['summary'] = {'high_level_summary': "Unable to extract summary and keywords"}
+
         try:
             keyword_response = ce.ModelInference.complete(
                 prompt=keyword_prompt ,
                 model_selected=model_selected,
                 model_service_choice=ce.MODEL_SERVICE_CHOICE.ENDOR
             )
-            summary_response = ce.ModelInference.complete(
-                prompt=summary_prompt ,
-                model_selected=model_selected,
-                model_service_choice=ce.MODEL_SERVICE_CHOICE.ENDOR
-            )
+            print(keyword_response)
         except:
             row_dict['keywords'] = []
-            row_dict['summary'] = {'high_level_summary': "Unable to extract summary and keywords"}
-            continue
-
-        print(keyword_response)
-        print(summary_response)
-
+            
         _keyword_response = ce.model_response_literal_eval(keyword_response)
         _summary_response = ce.model_response_literal_eval(summary_response)
         keyword_dict = dict()
@@ -89,7 +90,6 @@ def run_keyword_summary():
         else:
             row_dict['summary'] = dict(unstructured_summary=summary_response)
 
-        print(row_dict['summary'])
         if df_ai is None:
             df_ai = pd.DataFrame([row_dict])
         else:
