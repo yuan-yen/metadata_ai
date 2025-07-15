@@ -96,7 +96,6 @@ def run_keyword_summary():
             df_ai = pd.concat([df_ai, pd.DataFrame([row_dict])])
 
         df_ai.reset_index(drop=True).to_parquet(path_ai)
-        time.sleep(1)
 
 while True:
     run_keyword_summary()
