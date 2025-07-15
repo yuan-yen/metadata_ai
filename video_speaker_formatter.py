@@ -50,7 +50,9 @@ while True:
 
         print('>>>>>>>>>>>>>>>', idx, row['upload_date'])
         if df_spk is not None and row['video_id'] in set(df_spk.video_id):
+            print(df_spk[df_spk['video_id']==row['video_id']].lines[0])
             print('skip')
+            time.sleep(10)
             continue
 
         incr += 1
