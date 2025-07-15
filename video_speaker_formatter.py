@@ -43,16 +43,15 @@ while True:
         df_spk = df_spk[~df_spk['lines'].isna()]
 
 
-    for idx, row in df.iterrows():
+    for idx, row in df[:500].iterrows():
         #if incr % 10 == 0 and incr != 0:
         #    del sf
         #    sf = load_speaker_formatter()
 
         print('>>>>>>>>>>>>>>>', idx, row['upload_date'])
         if df_spk is not None and row['video_id'] in set(df_spk.video_id):
-            print(df_spk[df_spk['video_id']==row['video_id']].lines[0])
+            print(list(df_spk[df_spk['video_id']==row['video_id']]['lines'])[0])
             print('skip')
-            time.sleep(10)
             continue
 
         incr += 1
